@@ -27,10 +27,6 @@
           <span aria-hidden="true">⚙</span>
           <span>Ajustes</span>
         </button>
-        <button class="nav-btn" id="notificationBtnTop" type="button">
-          <span aria-hidden="true">🔔</span>
-          <span>Alertas</span>
-        </button>
         <button class="icon-btn" id="themeToggle" type="button" aria-label="Alternar modo escuro">
           <span id="themeIcon" aria-hidden="true">☾</span>
         </button>
@@ -92,13 +88,6 @@
               </div>
             </label>
 
-            <div class="alert-box">
-              <div>
-                <strong>Alerta ao finalizar</strong>
-                <small id="notificationStatus">Clique para ativar a notificação do navegador.</small>
-              </div>
-              <button class="secondary-btn compact" id="notificationBtn" type="button">Ativar</button>
-            </div>
 
             <button class="primary-btn full" type="submit">Salvar ajustes</button>
           </form>
@@ -125,10 +114,9 @@
     <div class="modal-card done-card">
       <div class="done-icon" aria-hidden="true">✓</div>
       <h2 id="doneTitle">Timer finalizado</h2>
-      <p id="doneText">Seu ciclo terminou.</p>
+      <p id="doneText">Seu ciclo terminou. O alerta continuará tocando até você iniciar o próximo ciclo.</p>
       <div class="done-actions">
         <button class="primary-btn" id="doneStartNextBtn" type="button">Começar próximo ciclo</button>
-        <button class="secondary-btn" id="doneCloseBtn" type="button">Fechar</button>
       </div>
     </div>
   </dialog>

@@ -608,40 +608,6 @@ button {
   }
 }
 
-.alert-box {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--surface-2) 72%, transparent);
-}
-
-.alert-box div {
-  display: grid;
-  gap: 4px;
-}
-
-.alert-box strong {
-  color: var(--text);
-  font-size: 15px;
-}
-
-.alert-box small {
-  color: var(--muted);
-  font-weight: 600;
-  line-height: 1.35;
-}
-
-.secondary-btn.compact {
-  width: auto;
-  min-height: 40px;
-  padding: 0 14px;
-  white-space: nowrap;
-}
-
 .done-modal {
   width: min(620px, calc(100% - 32px));
 }
@@ -710,13 +676,11 @@ button {
 }
 
 @media (max-width: 720px) {
-  .alert-box,
   .done-actions {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .secondary-btn.compact,
   .done-actions .secondary-btn {
     width: 100%;
   }

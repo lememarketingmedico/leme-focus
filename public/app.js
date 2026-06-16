@@ -14,13 +14,15 @@ const DEFAULT_STATE = {
     focusMinutes: 0
   },
   tasks: [],
-  cycle: 1,
-  notificationsEnabled: false
+  cycle: 1
 };
 
 let state = loadState();
 const ORIGINAL_TITLE = document.title;
 let titleFlashIntervalId = null;
+let alarmIntervalId = null;
+let alarmAudioContext = null;
+let isAlarmActive = false;
 let isRunning = false;
 let remainingSeconds = minutesToSeconds(state.settings[state.mode]);
 let timerEndAt = null;
@@ -54,14 +56,10 @@ const elements = {
   reportOpenTasks: document.getElementById('reportOpenTasks'),
   resetReportBtn: document.getElementById('resetReportBtn'),
   toast: document.getElementById('toast'),
-  notificationBtn: document.getElementById('notificationBtn'),
-  notificationBtnTop: document.getElementById('notificationBtnTop'),
-  notificationStatus: document.getElementById('notificationStatus'),
   doneModal: document.getElementById('doneModal'),
   doneTitle: document.getElementById('doneTitle'),
   doneText: document.getElementById('doneText'),
-  doneStartNextBtn: document.getElementById('doneStartNextBtn'),
-  doneCloseBtn: document.getElementById('doneCloseBtn')
+  doneStartNextBtn: document.getElementById('doneStartNextBtn')
 };
 
 const messages = {
@@ -146,6 +144,12 @@ function setMode(mode) {
 }
 
 function startTimer() {
+  prepareAlarmAudio();
+
+  if (isAlarmActive) {
+    stopCompletionAlert();
+  }
+
   if (isRunning) {
     pauseTimer();
     return;
@@ -194,7 +198,7 @@ function tick() {
 function completeTimer() {
   const completedMode = state.mode;
   stopTimer(false);
-  playDoneSound();
+  startAlarmLoop();
   vibrateDevice();
 
   if (completedMode === 'pomodoro') {
@@ -214,22 +218,45 @@ function completeTimer() {
   showCompletionAlert(completedMode);
 }
 
-function playDoneSound() {
+function prepareAlarmAudio() {
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
-    const context = new AudioContext();
-    const pattern = [0, 0.32, 0.64, 1.05];
+    if (!alarmAudioContext) {
+      alarmAudioContext = new AudioContext();
+    }
+
+    if (alarmAudioContext.state === 'suspended') {
+      alarmAudioContext.resume();
+    }
+  } catch {
+    // Alguns navegadores podem bloquear áudio antes de uma interação.
+  }
+}
+
+function playAlarmPattern() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!alarmAudioContext) {
+      alarmAudioContext = new AudioContext();
+    }
+
+    if (alarmAudioContext.state === 'suspended') {
+      alarmAudioContext.resume();
+    }
+
+    const context = alarmAudioContext;
+    const pattern = [0, 0.28, 0.56];
 
     pattern.forEach((delay, index) => {
       const oscillator = context.createOscillator();
       const gain = context.createGain();
       const startAt = context.currentTime + delay;
-      const endAt = startAt + 0.22;
+      const endAt = startAt + 0.2;
 
       oscillator.type = 'sine';
-      oscillator.frequency.value = index === pattern.length - 1 ? 880 : 720;
+      oscillator.frequency.value = index === 1 ? 940 : 760;
       gain.gain.setValueAtTime(0.001, startAt);
-      gain.gain.exponentialRampToValueAtTime(0.24, startAt + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.3, startAt + 0.03);
       gain.gain.exponentialRampToValueAtTime(0.001, endAt);
 
       oscillator.connect(gain);
@@ -239,6 +266,27 @@ function playDoneSound() {
     });
   } catch {
     // Som não suportado. O timer continua funcionando normalmente.
+  }
+}
+
+function startAlarmLoop() {
+  stopAlarmLoop(false);
+  isAlarmActive = true;
+  playAlarmPattern();
+  alarmIntervalId = window.setInterval(playAlarmPattern, 1300);
+}
+
+function stopAlarmLoop(closeContext = false) {
+  if (alarmIntervalId) {
+    window.clearInterval(alarmIntervalId);
+    alarmIntervalId = null;
+  }
+
+  isAlarmActive = false;
+
+  if (closeContext && alarmAudioContext) {
+    alarmAudioContext.close().catch(() => {});
+    alarmAudioContext = null;
   }
 }
 
@@ -252,14 +300,13 @@ function showCompletionAlert(completedMode) {
   const isFocus = completedMode === 'pomodoro';
   const title = isFocus ? 'Pomodoro concluído!' : 'Pausa concluída!';
   const body = isFocus
-    ? 'Seu ciclo de foco terminou. Hora de respirar um pouco.'
-    : 'Sua pausa terminou. Vamos voltar ao foco?';
+    ? 'Seu ciclo de foco terminou. O alerta continuará tocando até você iniciar a pausa.'
+    : 'Sua pausa terminou. O alerta continuará tocando até você voltar ao foco.';
 
   elements.doneTitle.textContent = title;
   elements.doneText.textContent = body;
 
   startTitleFlash(title);
-  showBrowserNotification(title, body);
 
   if (typeof elements.doneModal.showModal === 'function') {
     if (elements.doneModal.open) elements.doneModal.close();
@@ -267,13 +314,14 @@ function showCompletionAlert(completedMode) {
   }
 }
 
-function closeCompletionAlert() {
+function stopCompletionAlert() {
+  stopAlarmLoop();
   stopTitleFlash();
   if (elements.doneModal.open) elements.doneModal.close();
 }
 
 function startNextCycle() {
-  closeCompletionAlert();
+  stopCompletionAlert();
   startTimer();
 }
 
@@ -293,109 +341,6 @@ function stopTitleFlash(restoreTitle = true) {
     titleFlashIntervalId = null;
   }
   if (restoreTitle) document.title = ORIGINAL_TITLE;
-}
-
-function browserNotificationsAvailable() {
-  return 'Notification' in window && window.isSecureContext;
-}
-
-async function askNotificationPermission() {
-  if (!('Notification' in window)) {
-    showToast('Este navegador não suporta notificações.');
-    updateNotificationStatus();
-    return;
-  }
-
-  if (!window.isSecureContext) {
-    showToast('Para alertas fora da aba, use HTTPS ou localhost.');
-    updateNotificationStatus();
-    return;
-  }
-
-  const permission = await Notification.requestPermission();
-  state.notificationsEnabled = permission === 'granted';
-  saveState();
-  updateNotificationStatus();
-
-  if (permission === 'granted') {
-    showToast('Notificações ativadas.');
-  } else if (permission === 'denied') {
-    showToast('Notificações bloqueadas no navegador.');
-  } else {
-    showToast('Notificações não ativadas.');
-  }
-}
-
-function showBrowserNotification(title, body) {
-  if (!browserNotificationsAvailable() || Notification.permission !== 'granted') return;
-
-  try {
-    const notification = new Notification(title, {
-      body,
-      icon: '/assets/logo-completa.png',
-      badge: '/assets/logo-completa.png',
-      tag: 'leme-focus-timer',
-      requireInteraction: true
-    });
-
-    notification.onclick = () => {
-      window.focus();
-    };
-  } catch {
-    // Alguns navegadores bloqueiam notificações em condições específicas.
-  }
-}
-
-function updateNotificationStatus() {
-  if (!elements.notificationStatus) return;
-
-  const buttons = [elements.notificationBtn, elements.notificationBtnTop].filter(Boolean);
-
-  if (!('Notification' in window)) {
-    elements.notificationStatus.textContent = 'Seu navegador não suporta notificações do sistema.';
-    buttons.forEach(button => {
-      button.disabled = true;
-      if (button === elements.notificationBtn) button.textContent = 'Indisponível';
-    });
-    return;
-  }
-
-  if (!window.isSecureContext) {
-    elements.notificationStatus.textContent = 'Para aparecer fora da aba, publique com HTTPS ou use localhost.';
-    buttons.forEach(button => {
-      button.disabled = false;
-      if (button === elements.notificationBtn) button.textContent = 'Como ativar';
-    });
-    return;
-  }
-
-  if (Notification.permission === 'granted') {
-    elements.notificationStatus.textContent = 'Ativas. O alerta aparece mesmo em outra aba ou app.';
-    buttons.forEach(button => {
-      button.disabled = false;
-      if (button === elements.notificationBtn) button.textContent = 'Ativado';
-    });
-    state.notificationsEnabled = true;
-    saveState();
-    return;
-  }
-
-  if (Notification.permission === 'denied') {
-    elements.notificationStatus.textContent = 'Bloqueadas. Libere as notificações nas permissões do navegador.';
-    buttons.forEach(button => {
-      button.disabled = false;
-      if (button === elements.notificationBtn) button.textContent = 'Bloqueado';
-    });
-    state.notificationsEnabled = false;
-    saveState();
-    return;
-  }
-
-  elements.notificationStatus.textContent = 'Clique para ativar a notificação do navegador.';
-  buttons.forEach(button => {
-    button.disabled = false;
-    if (button === elements.notificationBtn) button.textContent = 'Ativar';
-  });
 }
 
 function updateSettingsFromForm(event) {
@@ -498,7 +443,6 @@ function render() {
   elements.longInput.value = state.settings.long;
 
   updateReport();
-  updateNotificationStatus();
   renderTasks();
 }
 
@@ -576,18 +520,9 @@ function bindEvents() {
     showToast('Relatório zerado.');
   });
 
-  if (elements.notificationBtn) {
-    elements.notificationBtn.addEventListener('click', askNotificationPermission);
-  }
-
-  if (elements.notificationBtnTop) {
-    elements.notificationBtnTop.addEventListener('click', askNotificationPermission);
-  }
-
-  elements.doneCloseBtn.addEventListener('click', closeCompletionAlert);
   elements.doneStartNextBtn.addEventListener('click', startNextCycle);
-  elements.doneModal.addEventListener('click', event => {
-    if (event.target === elements.doneModal) closeCompletionAlert();
+  elements.doneModal.addEventListener('cancel', event => {
+    event.preventDefault();
   });
 
   document.addEventListener('visibilitychange', () => {
