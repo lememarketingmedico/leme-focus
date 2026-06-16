@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#071624" />
+  <title>LEME Focus</title>
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="/assets/logo-branca.png" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand-block">
+        <img src="/assets/logo-horizontal-branca.png" alt="LEME" class="brand-logo" />
+        <span class="product-badge">FOCUS</span>
+      </div>
+
+      <nav class="menu" aria-label="Navegação principal">
+        <a href="#timer" class="menu-item active">Foco</a>
+        <a href="#tasks" class="menu-item">Demandas</a>
+        <a href="#reports" class="menu-item">Relatório</a>
+        <a href="#settings" class="menu-item">Ajustes</a>
+      </nav>
+
+      <div class="sidebar-card">
+        <p class="eyebrow">Método de trabalho</p>
+        <h3>Uma demanda por ciclo.</h3>
+        <p>Escolha a tarefa, entre em foco e registre os ciclos por cliente.</p>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">LEME Marketing Médico</p>
+          <h1>LEME Focus</h1>
+          <p class="subtitle">Timer de foco para demandas, criação e organização da equipe.</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="ghost-btn" id="notifyBtn">Ativar avisos</button>
+          <button class="ghost-btn" id="exportBtn">Exportar dados</button>
+          <label class="ghost-btn file-label" for="importInput">Importar</label>
+          <input id="importInput" type="file" accept="application/json" hidden />
+        </div>
+      </header>
+
+      <section id="timer" class="hero-grid">
+        <article class="timer-card glass-card">
+          <div class="mode-tabs" role="tablist" aria-label="Modos do timer">
+            <button class="mode-tab active" data-mode="focus">Foco</button>
+            <button class="mode-tab" data-mode="short">Pausa curta</button>
+            <button class="mode-tab" data-mode="long">Pausa longa</button>
+          </div>
+
+          <div class="timer-visual" id="timerRing">
+            <div class="timer-center">
+              <span class="timer-label" id="modeLabel">Ciclo de foco</span>
+              <strong class="timer-time" id="timeDisplay">25:00</strong>
+              <span class="timer-status" id="timerStatus">Pronto para começar</span>
+            </div>
+          </div>
+
+          <div class="active-task-pill" id="activeTaskPill">Nenhuma demanda selecionada</div>
+
+          <div class="timer-actions">
+            <button class="primary-btn" id="startBtn">Iniciar</button>
+            <button class="secondary-btn" id="resetBtn">Resetar</button>
+            <button class="secondary-btn" id="completeBtn">Concluir ciclo</button>
+          </div>
+        </article>
+
+        <article class="quick-card glass-card">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">Nova demanda</p>
+              <h2>Adicionar tarefa</h2>
+            </div>
+          </div>
+
+          <form id="taskForm" class="task-form">
+            <label>
+              Cliente ou projeto
+              <input id="clientInput" type="text" placeholder="Ex: Dr. Diogo, LEME, Gastrocentro" required />
+            </label>
+            <label>
+              Tarefa
+              <input id="titleInput" type="text" placeholder="Ex: legenda carrossel, roteiro, arte" required />
+            </label>
+            <label>
+              Estimativa de ciclos
+              <input id="estimateInput" type="number" min="1" max="20" value="2" required />
+            </label>
+            <button class="primary-btn full" type="submit">Criar demanda</button>
+          </form>
+
+          <div class="focus-note">
+            <span>Regra simples</span>
+            <p>Quando o ciclo começar, evite trocar de tarefa. O relatório fica mais limpo e mostra melhor onde o tempo foi usado.</p>
+          </div>
+        </article>
+      </section>
+
+      <section class="stats-grid" aria-label="Indicadores rápidos">
+        <article class="stat-card">
+          <span>Foco hoje</span>
+          <strong id="todayMinutes">0min</strong>
+          <small id="todayCycles">0 ciclos concluídos</small>
+        </article>
+        <article class="stat-card">
+          <span>Semana</span>
+          <strong id="weekMinutes">0h</strong>
+          <small id="weekCycles">0 ciclos concluídos</small>
+        </article>
+        <article class="stat-card">
+          <span>Demandas abertas</span>
+          <strong id="openTasks">0</strong>
+          <small>em produção</small>
+        </article>
+        <article class="stat-card">
+          <span>Cliente em foco</span>
+          <strong id="topClient">-</strong>
+          <small>maior tempo registrado</small>
+        </article>
+      </section>
+
+      <section id="tasks" class="content-grid">
+        <article class="panel wide-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Produção</p>
+              <h2>Demandas da equipe</h2>
+            </div>
+            <div class="filter-row">
+              <input id="searchInput" class="search-input" type="search" placeholder="Buscar cliente ou tarefa" />
+              <select id="filterSelect" class="search-input small-select">
+                <option value="open">Abertas</option>
+                <option value="all">Todas</option>
+                <option value="done">Concluídas</option>
+              </select>
+            </div>
+          </div>
+          <div id="taskList" class="task-list"></div>
+        </article>
+
+        <article class="panel side-panel">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">Clientes</p>
+              <h2>Tempo por cliente</h2>
+            </div>
+          </div>
+          <div id="clientBars" class="client-bars"></div>
+        </article>
+      </section>
+
+      <section id="reports" class="content-grid reports-grid">
+        <article class="panel wide-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Histórico</p>
+              <h2>Sessões concluídas</h2>
+            </div>
+            <button class="danger-btn" id="clearHistoryBtn">Limpar histórico</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Cliente</th>
+                  <th>Tarefa</th>
+                  <th>Tempo</th>
+                </tr>
+              </thead>
+              <tbody id="sessionTable"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article id="settings" class="panel side-panel">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">Ajustes</p>
+              <h2>Configurações</h2>
+            </div>
+          </div>
+          <form id="settingsForm" class="settings-form">
+            <label>Foco em minutos <input id="focusMinutes" type="number" min="1" max="120" /></label>
+            <label>Pausa curta <input id="shortMinutes" type="number" min="1" max="60" /></label>
+            <label>Pausa longa <input id="longMinutes" type="number" min="1" max="90" /></label>
+            <label>Ciclos até pausa longa <input id="roundsBeforeLong" type="number" min="1" max="12" /></label>
+            <label class="checkbox-line"><input id="autoBreak" type="checkbox" /> Iniciar pausa automaticamente</label>
+            <label class="checkbox-line"><input id="autoFocus" type="checkbox" /> Voltar ao foco automaticamente</label>
+            <button class="primary-btn full" type="submit">Salvar ajustes</button>
+          </form>
+          <button class="danger-btn full" id="resetDataBtn">Apagar tudo</button>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
