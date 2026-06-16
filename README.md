@@ -1,17 +1,17 @@
 # LEME Focus
 
-App de foco, tarefas e pomodoros com a identidade visual da LEME Marketing Médico.
+Versão clean do app de foco da LEME Marketing Médico.
 
-## O que já tem
+## O que tem
 
-- Timer Pomodoro com foco, pausa curta e pausa longa
+- Timer de foco, pausa curta e pausa longa
 - Tarefas por cliente/projeto
-- Estimativa e contagem de ciclos por tarefa
-- Histórico de sessões concluídas
-- Relatório do dia, da semana e por cliente
-- Configurações de tempo
+- Contagem de ciclos por tarefa
+- Resumo do dia, da semana e por cliente
+- Histórico de sessões
+- Ajustes de tempo
 - Exportação e importação dos dados em JSON
-- Layout responsivo para desktop e celular
+- Layout responsivo
 - Dados salvos no navegador via localStorage
 
 ## Como rodar localmente
@@ -35,8 +35,7 @@ http://localhost:3000
 4. Selecione o repositório do LEME Focus.
 5. Configure a porta interna como **3000**.
 6. Faça o deploy.
-7. Aponte um domínio, por exemplo: `focus.seudominio.com.br`.
 
-## Observação importante
+## Observação
 
-Esta é uma versão MVP sem login e sem banco de dados. Os dados ficam salvos no navegador de cada usuário. Para sincronizar entre computador e celular, a próxima versão deve incluir backend com login e PostgreSQL.
+Esta versão não tem login nem banco de dados. Os dados ficam salvos no navegador. Para sincronizar entre computador e celular, a próxima etapa é criar login com PostgreSQL.
