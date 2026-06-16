@@ -1,0 +1,16 @@
+{
+  "name": "LEME Focus",
+  "short_name": "LEME Focus",
+  "description": "Timer Pomodoro simples e clean.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#08182a",
+  "theme_color": "#173d56",
+  "icons": [
+    {
+      "src": "/assets/logo-completa.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "leme-focus-simples",
+  "version": "1.0.0",
+  "description": "LEME Focus - timer Pomodoro simples, clean, com modo escuro e tempos personalizáveis.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=18"
+  }
+}

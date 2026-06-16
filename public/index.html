@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#173d56" />
+  <title>LEME Focus</title>
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="/assets/logo-completa.png" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="LEME Focus">
+        <img class="logo logo-light" src="/assets/logo-horizontal-completa.png" alt="LEME" />
+        <img class="logo logo-dark" src="/assets/logo-horizontal-branca.png" alt="LEME" />
+        <span class="brand-focus">Focus</span>
+      </a>
+
+      <nav class="top-actions" aria-label="Ações rápidas">
+        <button class="nav-btn" id="reportBtn" type="button" aria-haspopup="dialog">
+          <span aria-hidden="true">▥</span>
+          <span>Relatório</span>
+        </button>
+        <button class="nav-btn active" id="settingsToggle" type="button" aria-expanded="true" aria-controls="settingsPanel">
+          <span aria-hidden="true">⚙</span>
+          <span>Ajustes</span>
+        </button>
+        <button class="icon-btn" id="themeToggle" type="button" aria-label="Alternar modo escuro">
+          <span id="themeIcon" aria-hidden="true">☾</span>
+        </button>
+      </nav>
+    </header>
+
+    <main class="page">
+      <section class="hero-grid">
+        <div class="timer-column">
+          <article class="timer-card" aria-label="Timer Pomodoro">
+            <div class="tabs" role="tablist" aria-label="Modos do timer">
+              <button class="tab active" type="button" data-mode="pomodoro" role="tab" aria-selected="true">Pomodoro</button>
+              <button class="tab" type="button" data-mode="short" role="tab" aria-selected="false">Pausa curta</button>
+              <button class="tab" type="button" data-mode="long" role="tab" aria-selected="false">Pausa longa</button>
+            </div>
+
+            <div class="time" id="timeDisplay" aria-live="polite">25:00</div>
+
+            <div class="timer-controls">
+              <button class="primary-btn" id="startBtn" type="button">COMEÇAR</button>
+              <button class="ghost-btn hidden" id="resetBtn" type="button">Resetar</button>
+            </div>
+          </article>
+
+          <div class="focus-message">
+            <strong id="cycleCount">#1</strong>
+            <span id="modeMessage">Hora de focar.</span>
+          </div>
+        </div>
+
+        <aside class="settings-panel" id="settingsPanel" aria-label="Ajustes de tempo">
+          <div class="panel-header">
+            <h2>Ajustar tempos</h2>
+            <button class="close-btn" id="settingsClose" type="button" aria-label="Fechar ajustes">×</button>
+          </div>
+
+          <form id="settingsForm" class="settings-form">
+            <label class="setting-row">
+              <span>Pomodoro</span>
+              <div class="number-field">
+                <input id="pomodoroInput" type="number" min="1" max="180" value="25" />
+                <small>min</small>
+              </div>
+            </label>
+
+            <label class="setting-row">
+              <span>Pausa curta</span>
+              <div class="number-field">
+                <input id="shortInput" type="number" min="1" max="60" value="5" />
+                <small>min</small>
+              </div>
+            </label>
+
+            <label class="setting-row">
+              <span>Pausa longa</span>
+              <div class="number-field">
+                <input id="longInput" type="number" min="1" max="120" value="15" />
+                <small>min</small>
+              </div>
+            </label>
+
+            <button class="primary-btn full" type="submit">Salvar ajustes</button>
+          </form>
+        </aside>
+      </section>
+
+      <section class="tasks-wrap" aria-labelledby="tasksTitle">
+        <div class="section-title">
+          <h2 id="tasksTitle">Tarefas</h2>
+          <button class="mini-btn" id="clearDoneBtn" type="button">Limpar concluídas</button>
+        </div>
+
+        <form class="add-task" id="taskForm">
+          <input id="taskInput" type="text" maxlength="100" placeholder="Escreva uma tarefa simples..." autocomplete="off" />
+          <button type="submit">+ Adicionar</button>
+        </form>
+
+        <div class="task-list" id="taskList" aria-live="polite"></div>
+      </section>
+    </main>
+  </div>
+
+  <dialog class="modal" id="reportModal">
+    <div class="modal-card">
+      <div class="panel-header">
+        <h2>Relatório de hoje</h2>
+        <button class="close-btn" id="reportClose" type="button" aria-label="Fechar relatório">×</button>
+      </div>
+      <div class="report-grid">
+        <div class="report-item">
+          <span>Pomodoros</span>
+          <strong id="reportPomodoros">0</strong>
+        </div>
+        <div class="report-item">
+          <span>Tempo focado</span>
+          <strong id="reportMinutes">0min</strong>
+        </div>
+        <div class="report-item">
+          <span>Tarefas abertas</span>
+          <strong id="reportOpenTasks">0</strong>
+        </div>
+      </div>
+      <button class="secondary-btn" id="resetReportBtn" type="button">Zerar relatório</button>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
