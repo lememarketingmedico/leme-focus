@@ -14,10 +14,13 @@ const DEFAULT_STATE = {
     focusMinutes: 0
   },
   tasks: [],
-  cycle: 1
+  cycle: 1,
+  notificationsEnabled: false
 };
 
 let state = loadState();
+const ORIGINAL_TITLE = document.title;
+let titleFlashIntervalId = null;
 let isRunning = false;
 let remainingSeconds = minutesToSeconds(state.settings[state.mode]);
 let timerEndAt = null;
@@ -50,7 +53,15 @@ const elements = {
   reportMinutes: document.getElementById('reportMinutes'),
   reportOpenTasks: document.getElementById('reportOpenTasks'),
   resetReportBtn: document.getElementById('resetReportBtn'),
-  toast: document.getElementById('toast')
+  toast: document.getElementById('toast'),
+  notificationBtn: document.getElementById('notificationBtn'),
+  notificationBtnTop: document.getElementById('notificationBtnTop'),
+  notificationStatus: document.getElementById('notificationStatus'),
+  doneModal: document.getElementById('doneModal'),
+  doneTitle: document.getElementById('doneTitle'),
+  doneText: document.getElementById('doneText'),
+  doneStartNextBtn: document.getElementById('doneStartNextBtn'),
+  doneCloseBtn: document.getElementById('doneCloseBtn')
 };
 
 const messages = {
@@ -184,6 +195,7 @@ function completeTimer() {
   const completedMode = state.mode;
   stopTimer(false);
   playDoneSound();
+  vibrateDevice();
 
   if (completedMode === 'pomodoro') {
     state.report.pomodoros += 1;
@@ -199,28 +211,191 @@ function completeTimer() {
   remainingSeconds = minutesToSeconds(state.settings[state.mode]);
   saveState();
   render();
+  showCompletionAlert(completedMode);
 }
 
 function playDoneSound() {
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     const context = new AudioContext();
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
+    const pattern = [0, 0.32, 0.64, 1.05];
 
-    oscillator.type = 'sine';
-    oscillator.frequency.value = 720;
-    gain.gain.setValueAtTime(0.001, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.18, context.currentTime + 0.03);
-    gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.5);
+    pattern.forEach((delay, index) => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      const startAt = context.currentTime + delay;
+      const endAt = startAt + 0.22;
 
-    oscillator.connect(gain);
-    gain.connect(context.destination);
-    oscillator.start();
-    oscillator.stop(context.currentTime + 0.55);
+      oscillator.type = 'sine';
+      oscillator.frequency.value = index === pattern.length - 1 ? 880 : 720;
+      gain.gain.setValueAtTime(0.001, startAt);
+      gain.gain.exponentialRampToValueAtTime(0.24, startAt + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, endAt);
+
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start(startAt);
+      oscillator.stop(endAt);
+    });
   } catch {
     // Som não suportado. O timer continua funcionando normalmente.
   }
+}
+
+function vibrateDevice() {
+  if ('vibrate' in navigator) {
+    navigator.vibrate([250, 140, 250, 140, 350]);
+  }
+}
+
+function showCompletionAlert(completedMode) {
+  const isFocus = completedMode === 'pomodoro';
+  const title = isFocus ? 'Pomodoro concluído!' : 'Pausa concluída!';
+  const body = isFocus
+    ? 'Seu ciclo de foco terminou. Hora de respirar um pouco.'
+    : 'Sua pausa terminou. Vamos voltar ao foco?';
+
+  elements.doneTitle.textContent = title;
+  elements.doneText.textContent = body;
+
+  startTitleFlash(title);
+  showBrowserNotification(title, body);
+
+  if (typeof elements.doneModal.showModal === 'function') {
+    if (elements.doneModal.open) elements.doneModal.close();
+    elements.doneModal.showModal();
+  }
+}
+
+function closeCompletionAlert() {
+  stopTitleFlash();
+  if (elements.doneModal.open) elements.doneModal.close();
+}
+
+function startNextCycle() {
+  closeCompletionAlert();
+  startTimer();
+}
+
+function startTitleFlash(message) {
+  stopTitleFlash(false);
+  let showMessage = true;
+  document.title = `⏰ ${message}`;
+  titleFlashIntervalId = window.setInterval(() => {
+    document.title = showMessage ? ORIGINAL_TITLE : `⏰ ${message}`;
+    showMessage = !showMessage;
+  }, 900);
+}
+
+function stopTitleFlash(restoreTitle = true) {
+  if (titleFlashIntervalId) {
+    window.clearInterval(titleFlashIntervalId);
+    titleFlashIntervalId = null;
+  }
+  if (restoreTitle) document.title = ORIGINAL_TITLE;
+}
+
+function browserNotificationsAvailable() {
+  return 'Notification' in window && window.isSecureContext;
+}
+
+async function askNotificationPermission() {
+  if (!('Notification' in window)) {
+    showToast('Este navegador não suporta notificações.');
+    updateNotificationStatus();
+    return;
+  }
+
+  if (!window.isSecureContext) {
+    showToast('Para alertas fora da aba, use HTTPS ou localhost.');
+    updateNotificationStatus();
+    return;
+  }
+
+  const permission = await Notification.requestPermission();
+  state.notificationsEnabled = permission === 'granted';
+  saveState();
+  updateNotificationStatus();
+
+  if (permission === 'granted') {
+    showToast('Notificações ativadas.');
+  } else if (permission === 'denied') {
+    showToast('Notificações bloqueadas no navegador.');
+  } else {
+    showToast('Notificações não ativadas.');
+  }
+}
+
+function showBrowserNotification(title, body) {
+  if (!browserNotificationsAvailable() || Notification.permission !== 'granted') return;
+
+  try {
+    const notification = new Notification(title, {
+      body,
+      icon: '/assets/logo-completa.png',
+      badge: '/assets/logo-completa.png',
+      tag: 'leme-focus-timer',
+      requireInteraction: true
+    });
+
+    notification.onclick = () => {
+      window.focus();
+    };
+  } catch {
+    // Alguns navegadores bloqueiam notificações em condições específicas.
+  }
+}
+
+function updateNotificationStatus() {
+  if (!elements.notificationStatus) return;
+
+  const buttons = [elements.notificationBtn, elements.notificationBtnTop].filter(Boolean);
+
+  if (!('Notification' in window)) {
+    elements.notificationStatus.textContent = 'Seu navegador não suporta notificações do sistema.';
+    buttons.forEach(button => {
+      button.disabled = true;
+      if (button === elements.notificationBtn) button.textContent = 'Indisponível';
+    });
+    return;
+  }
+
+  if (!window.isSecureContext) {
+    elements.notificationStatus.textContent = 'Para aparecer fora da aba, publique com HTTPS ou use localhost.';
+    buttons.forEach(button => {
+      button.disabled = false;
+      if (button === elements.notificationBtn) button.textContent = 'Como ativar';
+    });
+    return;
+  }
+
+  if (Notification.permission === 'granted') {
+    elements.notificationStatus.textContent = 'Ativas. O alerta aparece mesmo em outra aba ou app.';
+    buttons.forEach(button => {
+      button.disabled = false;
+      if (button === elements.notificationBtn) button.textContent = 'Ativado';
+    });
+    state.notificationsEnabled = true;
+    saveState();
+    return;
+  }
+
+  if (Notification.permission === 'denied') {
+    elements.notificationStatus.textContent = 'Bloqueadas. Libere as notificações nas permissões do navegador.';
+    buttons.forEach(button => {
+      button.disabled = false;
+      if (button === elements.notificationBtn) button.textContent = 'Bloqueado';
+    });
+    state.notificationsEnabled = false;
+    saveState();
+    return;
+  }
+
+  elements.notificationStatus.textContent = 'Clique para ativar a notificação do navegador.';
+  buttons.forEach(button => {
+    button.disabled = false;
+    if (button === elements.notificationBtn) button.textContent = 'Ativar';
+  });
 }
 
 function updateSettingsFromForm(event) {
@@ -323,6 +498,7 @@ function render() {
   elements.longInput.value = state.settings.long;
 
   updateReport();
+  updateNotificationStatus();
   renderTasks();
 }
 
@@ -399,7 +575,28 @@ function bindEvents() {
     updateReport();
     showToast('Relatório zerado.');
   });
+
+  if (elements.notificationBtn) {
+    elements.notificationBtn.addEventListener('click', askNotificationPermission);
+  }
+
+  if (elements.notificationBtnTop) {
+    elements.notificationBtnTop.addEventListener('click', askNotificationPermission);
+  }
+
+  elements.doneCloseBtn.addEventListener('click', closeCompletionAlert);
+  elements.doneStartNextBtn.addEventListener('click', startNextCycle);
+  elements.doneModal.addEventListener('click', event => {
+    if (event.target === elements.doneModal) closeCompletionAlert();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && titleFlashIntervalId) {
+      document.title = ORIGINAL_TITLE;
+    }
+  });
 }
+
 
 bindEvents();
 render();
